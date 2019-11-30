@@ -36,7 +36,6 @@ function createInputResolvers(typeDefs, resolvers) {
 
     function createInputResolver(resolver) {
         return async function inputResolver(source, args, context, info) {
-            let result;
             if (!info.transaction) {
                 info = {
                     ...info,
@@ -45,7 +44,7 @@ function createInputResolvers(typeDefs, resolvers) {
             }
             const protections = [];
             try {
-                result = await resolver(source, args, context, info);
+                const result = await resolver(source, args, context, info);
 
                 const field = info.parentType.getFields()[info.fieldName];
                 if (Array.isArray(field.args)) {
@@ -113,7 +112,9 @@ function createInputResolvers(typeDefs, resolvers) {
                 if (!type) {
                     return;
                 }
-                type = type.ofType || type;
+                while (type.ofType) {
+                    type = type.ofType;
+                }
                 if (!isInputObjectType(type)) {
                     return;
                 }
