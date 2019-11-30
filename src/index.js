@@ -67,12 +67,12 @@ function createInputResolvers(typeDefs, resolvers) {
             async function transaction(handler, rollback) {
                 const result = await handler();
                 if (typeof rollback === `function`) {
-                    protections.push(rollback);
+                    protections.push(() => rollback(result));
                 }
                 return result;
             }
 
-            async function rollback(source, args, context, info) {
+            async function rollback(result) {
                 let rollbackErrors = await Promise.all(
                     protections.map(executeRollback)
                 );
@@ -88,7 +88,7 @@ function createInputResolvers(typeDefs, resolvers) {
 
                 async function executeRollback(rollbackHandler) {
                     try {
-                        await rollbackHandler(source, args, context, info);
+                        await rollbackHandler(result);
                         return undefined;
                     } catch (ex) {
                         return ex;
