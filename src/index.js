@@ -36,16 +36,65 @@ function createInputResolvers(typeDefs, resolvers) {
 
     function createInputResolver(resolver) {
         return async function inputResolver(source, args, context, info) {
-            const result = await resolver(source, args, context, info);
-
-            const field = info.parentType.getFields()[info.fieldName];
-            if (Array.isArray(field.args)) {
-                await Promise.all(
-                    field.args.filter(arg => arg.name in args)
-                        .map(arg => processType(arg.type, args[arg.name]))
-                );
+            if (!info.transaction) {
+                info = {
+                    ...info,
+                    transaction
+                };
             }
-            return result;
+            const protections = [];
+            try {
+                const result = await resolver(source, args, context, info);
+
+                const field = info.parentType.getFields()[info.fieldName];
+                if (Array.isArray(field.args)) {
+                    await Promise.all(
+                        field.args.filter(arg => arg.name in args)
+                            .map(arg => processType(arg.type, args[arg.name]))
+                    );
+                }
+
+                return result;
+            } catch (ex) {
+                try {
+                    await rollback(source, args, context, info);
+                } catch (rollbackEx) {
+                    ex.rollbackErrors = rollbackEx;
+                }
+                throw ex;
+            }
+
+            async function transaction(handler, rollback) {
+                const result = await handler();
+                if (typeof rollback === `function`) {
+                    protections.push(rollback);
+                }
+                return result;
+            }
+
+            async function rollback(source, args, context, info) {
+                let rollbackErrors = await Promise.all(
+                    protections.map(executeRollback)
+                );
+                protections.length = 0;
+
+                rollbackErrors = rollbackErrors.filter(err => err);
+                if (rollbackErrors.length === 1) {
+                    throw rollbackErrors[0];
+                } else if (rollbackErrors.length > 1) {
+                    const err = new Error(`Errors occured during rollback. ${rollbackErrors.map(rbe => rbe.message)}`);
+                    throw err;
+                }
+
+                async function executeRollback(rollbackHandler) {
+                    try {
+                        await rollbackHandler(source, args, context, info);
+                        return undefined;
+                    } catch (ex) {
+                        return ex;
+                    }
+                }
+            }
 
             // Note: We execute 1 level deep here. Since any deeper level resolvers
             //  will do their own execution 1 level deep, we end up with a natural
