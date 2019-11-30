@@ -50,7 +50,7 @@ function createInputResolvers(typeDefs, resolvers) {
                 if (Array.isArray(field.args)) {
                     await Promise.all(
                         field.args.filter(arg => arg.name in args)
-                            .map(arg => processType(arg.type, args[arg.name]))
+                            .map(arg => processType(result, arg.type, args[arg.name]))
                     );
                 }
 
@@ -108,7 +108,7 @@ function createInputResolvers(typeDefs, resolvers) {
             //  For every property that is not defined in resolvers and also an InputObjectType
             //      Recursively execute, passing args.<property name> as the arguments to the resolver
 
-            async function processType(type, args = Object.create(null)) {
+            async function processType(source, type, args = Object.create(null)) {
                 if (!type) {
                     return;
                 }
@@ -129,21 +129,21 @@ function createInputResolvers(typeDefs, resolvers) {
                             .filter(key => key in args)
                             .map(async key => {
                                 const subInfo = buildInfo(key, info, type, fields);
-                                await resolvers[type.name][key](
-                                    result,
+                                const subResult = await resolvers[type.name][key](
+                                    source,
                                     args[key],
                                     context,
                                     subInfo
                                 );
                                 delete fields[key];
-                                return result;
+                                return subResult;
                             })
                     );
                 }
 
                 await Promise.all(
                     Object.keys(fields).map(
-                        key => processType(fields[key].type, args && args[key])
+                        key => processType(source, fields[key].type, args && args[key])
                     )
                 );
             }
