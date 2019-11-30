@@ -1,0 +1,17 @@
+{
+  "name": "graphql-input-resolvers",
+  "version": "0.0.1",
+  "description": "A package that allows for resolvers to be defined on input types",
+  "main": "src/index.js",
+  "keywords": [
+    "graphql",
+    "resolver",
+    "input"
+  ],
+  "author": "Calvin Mann <calvinmann+npm@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "graphql": "^14.5.8",
+    "graphql-tools": "^4.0.6"
+  }
+}
