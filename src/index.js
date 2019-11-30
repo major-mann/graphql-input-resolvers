@@ -36,6 +36,7 @@ function createInputResolvers(typeDefs, resolvers) {
 
     function createInputResolver(resolver) {
         return async function inputResolver(source, args, context, info) {
+            let result;
             if (!info.transaction) {
                 info = {
                     ...info,
@@ -44,7 +45,7 @@ function createInputResolvers(typeDefs, resolvers) {
             }
             const protections = [];
             try {
-                const result = await resolver(source, args, context, info);
+                result = await resolver(source, args, context, info);
 
                 const field = info.parentType.getFields()[info.fieldName];
                 if (Array.isArray(field.args)) {
@@ -57,7 +58,7 @@ function createInputResolvers(typeDefs, resolvers) {
                 return result;
             } catch (ex) {
                 try {
-                    await rollback(source, args, context, info);
+                    await rollback();
                 } catch (rollbackEx) {
                     ex.rollbackErrors = rollbackEx;
                 }
@@ -72,7 +73,7 @@ function createInputResolvers(typeDefs, resolvers) {
                 return result;
             }
 
-            async function rollback(result) {
+            async function rollback() {
                 let rollbackErrors = await Promise.all(
                     protections.map(executeRollback)
                 );
@@ -88,7 +89,7 @@ function createInputResolvers(typeDefs, resolvers) {
 
                 async function executeRollback(rollbackHandler) {
                     try {
-                        await rollbackHandler(result);
+                        await rollbackHandler();
                         return undefined;
                     } catch (ex) {
                         return ex;
