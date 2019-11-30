@@ -68,9 +68,8 @@ function createInputResolvers(typeDefs, resolvers) {
                     return;
                 }
 
-                let fields;
+                const fields = type.getFields();
                 if (resolvers[type.name]) {
-                    fields = type.getFields();
                     // TODO: Would be nice if we could somehow store the result to return instead
                     //          of other resolvers re-querying the data source
                     await Promise.all(
