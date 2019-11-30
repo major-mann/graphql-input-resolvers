@@ -20,10 +20,9 @@ function createInputResolvers(typeDefs, resolvers) {
     Object.keys(resolvers)
         .filter(typeName => !isType(resolvers[typeName]))
         .forEach(typeName => {
-            resolvers[typeName] = Object.keys(resolvers[typeName]).reduce((result, fieldName) => {
-                result[fieldName] = createInputResolver(resolvers[typeName][fieldName]);
-                return result;
-            }, {});
+            Object.keys(resolvers[typeName]).forEach(
+                fieldName => resolvers[typeName][fieldName] = createInputResolver(resolvers[typeName][fieldName])
+            );
         });
 
     const result = {
@@ -119,7 +118,7 @@ function createInputResolvers(typeDefs, resolvers) {
                     return;
                 }
 
-                const fields = type.getFields();
+                const fields = { ...type.getFields() };
                 if (resolvers[type.name]) {
                     // TODO: Would be nice if we could somehow store the result to return instead
                     //          of other resolvers re-querying the data source
